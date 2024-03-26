@@ -4,6 +4,7 @@ import tkinter as tk
 import os
 import signal
 import sys
+import re
 from tkinter import messagebox, filedialog, simpledialog ,ttk, scrolledtext # 導入simpledialog
 
 
@@ -96,7 +97,7 @@ class ViteProjectStarter(tk.Tk):
             messagebox.showinfo("Info", "Vite project is running...")
             
             # 啟動專案並捕獲輸出
-            self.process = subprocess.Popen('npm run dev', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, cwd=self.project_directory, text=True, bufsize=1, universal_newlines=True)
+            self.process = subprocess.Popen('npm run dev', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, cwd=self.project_directory, encoding='utf-8', bufsize=1, universal_newlines=True)
             
             # 在一個新線程中讀取輸出，以避免阻塞 GUI
             threading.Thread(target=self.read_output, daemon=True).start()
@@ -106,17 +107,18 @@ class ViteProjectStarter(tk.Tk):
             self.run_stop_btn.config(text="Run Vite Project")
     
     def read_output(self):
-        """讀取子進程的輸出並將其顯示在 GUI 中。"""
+        """读取子进程的输出并将其显示在 GUI 中，同时移除 ANSI 转义序列。"""
+        ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
         for line in self.process.stdout:
-            self.append_text(line)
+            cleaned_line = ansi_escape.sub('', line)  # 移除 ANSI 转义序列
+            self.append_text(cleaned_line)
         self.process.stdout.close()
         self.process.wait()
         
-        # 當進程結束時更新按鈕狀態
+        # 当进程结束时更新按钮状态
         self.run_stop_btn.config(text="Run Vite Project")
         self.append_text("\nVite project has been stopped.")
         self.process = None
-
 
     def stop_project(self):
         if self.process:
